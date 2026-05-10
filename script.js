@@ -1,13 +1,14 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
+import { OrbitControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/OrbitControls.js';
+import { EffectComposer } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { runBFS, runDFS, runAStar, isObstacle } from './algorithms.js';
 
 // --- CONFIG ---
-const GRID_SIZE = 10;
-const CELL_SIZE = 2.0; // Super Zoom
-const TERRAIN_TYPES = {
+export const GRID_SIZE = 10;
+export const CELL_SIZE = 2.0; // Super Zoom
+export const TERRAIN_TYPES = {
     grass:  { cost: 1,  color: 0x312e81, emissive: 0x1e1b4b, metalness: 0.1, roughness: 0.9 },
     forest: { cost: 3,  color: 0x064e3b, emissive: 0x022c22, hasTrees: true, metalness: 0.2, roughness: 1.0 },
     water:  { cost: 10, color: 0x1e40af, emissive: 0x1d4ed8, opacity: 0.8, metalness: 0.8, roughness: 0.2 },
@@ -15,22 +16,22 @@ const TERRAIN_TYPES = {
 };
 
 // --- GLOBALS ---
-let scene, camera, renderer, controls, raycaster, mouse, composer;
-let grid = [];
-let startNode = { r: 8, c: 8 }; // Adjusted for 10x10
-let endNode = { r: 1, c: 1 };   // Adjusted for 10x10
-let isRunning = false;
-let currentSearchId = 0; // Track current search to abort old ones
+export let scene, camera, renderer, controls, raycaster, mouse, composer;
+export let grid = [];
+export let startNode = { r: 8, c: 8 }; // Adjusted for 10x10
+export let endNode = { r: 1, c: 1 };   // Adjusted for 10x10
+export let isRunning = false;
+export let currentSearchId = 0; // Track current search to abort old ones
 let currentBrush = 'wall';
 let character, knight;
-let pathLine = null;
+export let pathLine = null;
 let particles = [];
 let embers = []; // Atmospheric embers
 let clock = new THREE.Clock();
 
 // Audio System
 let audioCtx = null;
-function playSound(freq, type = 'sine', duration = 0.1, volume = 0.1) {
+export function playSound(freq, type = 'sine', duration = 0.1, volume = 0.1) {
     try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = audioCtx.createOscillator();
@@ -47,13 +48,13 @@ function playSound(freq, type = 'sine', duration = 0.1, volume = 0.1) {
 }
 
 // DOM Elements
-const startBtn = document.getElementById('start-btn');
+export const startBtn = document.getElementById('start-btn');
 const mazeBtn = document.getElementById('maze-btn');
 const resetBtn = document.getElementById('reset-btn');
-const algorithmSelect = document.getElementById('algorithm');
-const pathCostDisplay = document.getElementById('path-cost');
-const pathLengthDisplay = document.getElementById('path-length');
-const nodesVisitedDisplay = document.getElementById('nodes-visited');
+export const algorithmSelect = document.getElementById('algorithm');
+export const pathCostDisplay = document.getElementById('path-cost');
+export const pathLengthDisplay = document.getElementById('path-length');
+export const nodesVisitedDisplay = document.getElementById('nodes-visited');
 const brushBtns = document.querySelectorAll('.brush-btn');
 
 // --- INIT ---
@@ -263,7 +264,7 @@ function createWizard() {
     updateWizardPos();
 }
 
-function updateWizardPos() {
+export function updateWizardPos() {
     const offset = (GRID_SIZE * CELL_SIZE) / 2;
     character.position.set(endNode.r * CELL_SIZE - offset + CELL_SIZE/2, 0, endNode.c * CELL_SIZE - offset + CELL_SIZE/2);
 }
@@ -320,7 +321,7 @@ function createKnight() {
     updateCharacterPos(startNode.r, startNode.c);
 }
 
-function spawnMagicParticles(x, y, z, color, count = 10) {
+export function spawnMagicParticles(x, y, z, color, count = 10) {
     for (let i = 0; i < count; i++) {
         const geo = new THREE.BoxGeometry(0.08, 0.08, 0.08);
         const mat = new THREE.MeshStandardMaterial({ 
@@ -343,7 +344,7 @@ function spawnMagicParticles(x, y, z, color, count = 10) {
     }
 }
 
-function updateCharacterPos(r, c) {
+export function updateCharacterPos(r, c) {
     const offset = (GRID_SIZE * CELL_SIZE) / 2;
     // Now moving the Knight instead of the Wizard
     knight.position.set(r * CELL_SIZE - offset + CELL_SIZE/2, 0, c * CELL_SIZE - offset + CELL_SIZE/2);
@@ -403,7 +404,7 @@ function generateRandomMaze() {
     playSound(220, 'square', 0.2);
 }
 
-function updateCell(r, c, type) {
+export function updateCell(r, c, type) {
     const node = grid[r][c];
     const info = TERRAIN_TYPES[type];
     
@@ -553,22 +554,7 @@ function updateCell(r, c, type) {
     }
 }
 
-// THE ABSOLUTE OBSTACLE CHECKER
-function isObstacle(node) {
-    if (!node) return true;
-    const type = node.type;
-    // Treat Wall, Forest, and Water as absolute obstacles
-    if (type === 'wall' || type === 'forest' || type === 'water') return true;
-    if (TERRAIN_TYPES[type].cost === Infinity) return true;
-    
-    // Check if there are any wall-like decorations (Crystals)
-    const hasCrystals = node.decorations.some(d => d.userData && d.userData.isCrystal);
-    if (hasCrystals) return true;
-    
-    return false;
-}
-
-function clearVisuals() {
+export function clearVisuals() {
     for (let r = 0; r < GRID_SIZE; r++) {
         for (let c = 0; c < GRID_SIZE; c++) {
             const node = grid[r][c];
@@ -599,7 +585,7 @@ function clearVisuals() {
     updateCharacterPos(startNode.r, startNode.c);
 }
 
-async function startSearch() {
+export async function startSearch() {
     if (isRunning) {
         currentSearchId++; // Stop previous search
         isRunning = false;
@@ -647,133 +633,7 @@ async function startSearch() {
     }
 }
 
-async function runAStar(searchId) {
-    let openSet = [grid[startNode.r][startNode.c]];
-    grid[startNode.r][startNode.c].g = 0;
-    grid[startNode.r][startNode.c].f = heuristic(grid[startNode.r][startNode.c], grid[endNode.r][endNode.c]);
-    
-    let visitedCount = 0;
-
-    while (openSet.length > 0) {
-        if (searchId !== currentSearchId) return []; // ABORT
-
-        openSet.sort((a, b) => a.f - b.f);
-        const current = openSet.shift();
-        
-        if (current.isVisited) continue;
-        current.isVisited = true;
-        visitedCount++;
-        nodesVisitedDisplay.innerText = visitedCount;
-
-        if (current.r === endNode.r && current.c === endNode.c) return getPathData(current);
-
-        if (!(current.r === startNode.r && current.c === startNode.c)) {
-            spawnMagicParticles(current.mesh.position.x, 0.2, current.mesh.position.z, 0x4ade80, 2);
-            await sleep(5);
-        }
-
-        const neighbors = getNeighbors(current);
-        for (let neighbor of neighbors) {
-            // THE ABSOLUTE CHECK
-            if (isObstacle(neighbor) || neighbor.isVisited) continue;
-
-            const cost = TERRAIN_TYPES[neighbor.type].cost;
-            const tentativeG = current.g + cost;
-            if (tentativeG < neighbor.g) {
-                neighbor.parent = current;
-                neighbor.g = tentativeG;
-                neighbor.f = neighbor.g + heuristic(neighbor, grid[endNode.r][endNode.c]);
-                if (!openSet.includes(neighbor)) openSet.push(neighbor);
-            }
-        }
-    }
-    return [];
-}
-
-async function runBFS(searchId) {
-    let queue = [grid[startNode.r][startNode.c]];
-    grid[startNode.r][startNode.c].isVisited = true;
-    let visitedCount = 0;
-
-    while (queue.length > 0) {
-        if (searchId !== currentSearchId) return []; // ABORT
-
-        const current = queue.shift();
-        visitedCount++;
-        nodesVisitedDisplay.innerText = visitedCount;
-
-        if (current.r === endNode.r && current.c === endNode.c) return getPathData(current);
-
-        if (!(current.r === startNode.r && current.c === startNode.c)) {
-            spawnMagicParticles(current.mesh.position.x, 0.2, current.mesh.position.z, 0xffa500, 3);
-            playSound(880 + visitedCount, 'sine', 0.02, 0.05);
-            await sleep(20); 
-        }
-
-        const neighbors = getNeighbors(current);
-        for (let neighbor of neighbors) {
-            // THE ABSOLUTE CHECK
-            if (!neighbor.isVisited && !isObstacle(neighbor)) {
-                neighbor.isVisited = true;
-                neighbor.parent = current;
-                queue.push(neighbor);
-            }
-        }
-    }
-    return [];
-}
-
-async function runDFS(searchId) {
-    let stack = [grid[startNode.r][startNode.c]];
-    grid[startNode.r][startNode.c].isVisited = true;
-    let visitedCount = 0;
-
-    while (stack.length > 0) {
-        if (searchId !== currentSearchId) return []; // ABORT
-
-        const current = stack.pop();
-        visitedCount++;
-        nodesVisitedDisplay.innerText = visitedCount;
-
-        if (current.r === endNode.r && current.c === endNode.c) return getPathData(current);
-
-        if (!(current.r === startNode.r && current.c === startNode.c)) {
-            spawnMagicParticles(current.mesh.position.x, 0.2, current.mesh.position.z, 0xff4500, 3);
-            playSound(440 + visitedCount, 'sawtooth', 0.02, 0.03);
-            await sleep(20);
-        }
-
-        const neighbors = getNeighbors(current);
-        for (let neighbor of neighbors) {
-            if (!neighbor.isVisited && !isObstacle(neighbor)) {
-                neighbor.isVisited = true;
-                neighbor.parent = current;
-                stack.push(neighbor);
-            }
-        }
-    }
-    return [];
-}
-
-function heuristic(a, b) {
-    return Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
-}
-
-function getNeighbors(node) {
-    const res = [];
-    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-    for (let [dr, dc] of dirs) {
-        const nr = node.r + dr, nc = node.c + dc;
-        if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
-            const neighbor = grid[nr][nc];
-            // Safety check: only return valid nodes
-            if (neighbor) res.push(neighbor);
-        }
-    }
-    return res;
-}
-
-function getPathData(node) {
+export function getPathData(node) {
     const path = [];
     let curr = node;
     let totalCost = 0;
