@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knight & Wizard - BFS Pathfinding Visualization</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="hud">
+        <header>
+            <h1>Hiệp Sĩ Tìm Đường</h1>
+            <p>Nhóm 6</p>
+        </header>
+
+        <div class="controls-panel glass">
+            <div class="control-group">
+                <label>Thuật toán Tìm kiếm</label>
+                <select id="algorithm">
+                    <option value="bfs" selected>BFS (Tìm đường ngắn nhất - Queue)</option>
+                    <option value="dfs">DFS (Tìm kiếm theo chiều sâu - Stack)</option>
+                    <option value="astar">A* (Tham khảo thêm)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Kiến tạo Địa hình (Click ô đất)</label>
+                <div class="brush-grid">
+                    <button class="brush-btn active" data-type="wall">Đá Tảng</button>
+                    <button class="brush-btn" data-type="forest">Rừng Rậm</button>
+                    <button class="brush-btn" data-type="water">Hồ Nước</button>
+                    <button class="brush-btn" data-type="grass">Đồng Cỏ</button>
+                    <button class="brush-btn special" data-type="start">Vị trí Hiệp Sĩ</button>
+                    <button class="brush-btn special" data-type="end">Vị trí Phù Thủy</button>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="start-btn" class="btn primary">TRIỂN KHAI PHÉP THUẬT</button>
+                <button id="maze-btn" class="btn secondary">TẠO MÊ CUNG</button>
+                <button id="reset-btn" class="btn secondary">LÀM MỚI</button>
+            </div>
+
+            <div class="stats-panel">
+                <div class="stat"><span class="label">CHI PHÍ:</span> <span id="path-cost" class="value">-</span></div>
+                <div class="stat"><span class="label">BƯỚC ĐI:</span> <span id="path-length" class="value">-</span>
+                </div>
+                <div class="stat"><span class="label">SỐ NÚT DUYỆT:</span> <span id="nodes-visited"
+                        class="value">-</span></div>
+            </div>
+
+            <div class="comparison-trigger">
+                <button id="show-comparison" class="btn pulse-btn">📊 SO SÁNH BFS & DFS</button>
+            </div>
+        </div>
+
+        <div id="comparison-modal" class="modal">
+            <div class="modal-content glass">
+                <span class="close-modal">&times;</span>
+                <h2>So sánh Thuật toán Tìm đường</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Đặc điểm</th>
+                            <th>BFS (Rộng)</th>
+                            <th>DFS (Sâu)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><b>Đường đi</b></td>
+                            <td class="highlight-green">Luôn ngắn nhất</td>
+                            <td class="highlight-red">Lòng vòng, ngẫu nhiên</td>
+                        </tr>
+                        <tr class="live-data">
+                            <td><i>- Thực tế: Bước đi</i></td>
+                            <td id="live-bfs-steps">-</td>
+                            <td id="live-dfs-steps">-</td>
+                        </tr>
+                        <tr>
+                            <td><b>Bộ nhớ</b></td>
+                            <td>Tốn nhiều (Queue)</td>
+                            <td>Tiết kiệm (Stack)</td>
+                        </tr>
+                        <tr class="live-data">
+                            <td><i>- Thực tế: Nút duyệt</i></td>
+                            <td id="live-bfs-nodes">-</td>
+                            <td id="live-dfs-nodes">-</td>
+                        </tr>
+                        <tr>
+                            <td><b>Nguyên lý</b></td>
+                            <td>Duyệt theo tầng</td>
+                            <td>Duyệt sâu nhất</td>
+                        </tr>
+                        <tr>
+                            <td><b>Ứng dụng</b></td>
+                            <td>Tìm đường tối ưu</td>
+                            <td>Duyệt cây, giải mê cung</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="modal-tip">💡 <b>BFS</b> giống như đổ nước loang ra, <b>DFS</b> giống như đi vào hang sâu rồi quay lại.</p>
+            </div>
+        </div>
+        </div>
+
+        <div class="instructions glass">
+            <p>🖱️ <b>Xoay:</b> Chuột trái | <b>Di chuyển:</b> Chuột phải | <b>Zoom:</b> Cuộn chuột</p>
+            <p>🟦 <b>Click</b> vào ô đất để thay đổi chướng ngại vật.</p>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
