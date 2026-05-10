@@ -585,6 +585,52 @@ export function clearVisuals() {
     updateCharacterPos(startNode.r, startNode.c);
 }
 
+export function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function draw3DPath(path) {
+    if (pathLine) scene.remove(pathLine);
+    const points = path.map(node => new THREE.Vector3(node.mesh.position.x, 0.3, node.mesh.position.z));
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ color: 0xffa500, linewidth: 5 });
+    pathLine = new THREE.Line(geometry, material);
+    scene.add(pathLine);
+    
+    pathCostDisplay.innerText = path[path.length-1].g === Infinity ? '-' : path[path.length-1].g;
+    pathLengthDisplay.innerText = path.length;
+}
+
+async function animateCharacter(path, searchId) {
+    for (let node of path) {
+        if (searchId !== currentSearchId) return; 
+        updateCharacterPos(node.r, node.c);
+        playSound(220, 'sine', 0.05, 0.05);
+        if (!((node.r === startNode.r && node.c === startNode.c) || (node.r === endNode.r && node.c === endNode.c))) {
+            node.mesh.material.emissive.set(0xffa500); 
+            node.mesh.material.emissiveIntensity = 2;
+        }
+        await sleep(150);
+    }
+}
+
+async function knightAttackAnimation() {
+    const targetPos = character.position.clone();
+    playSound(110, 'sawtooth', 0.3, 0.2);
+    for(let i=0; i<10; i++) {
+        knight.position.lerp(targetPos, 0.3);
+        await sleep(20);
+    }
+    playSound(880, 'sine', 0.5, 0.2);
+    spawnMagicParticles(character.position.x, 0.8, character.position.z, 0xffffff, 30);
+    spawnMagicParticles(character.position.x, 0.8, character.position.z, 0xffa500, 20);
+    character.visible = false;
+    for(let i=0; i<10; i++) {
+        knight.position.lerp(new THREE.Vector3(knight.position.x, 0, knight.position.z), 0.2);
+        await sleep(20);
+    }
+}
+
 export async function startSearch() {
     if (isRunning) {
         currentSearchId++; // Stop previous search
